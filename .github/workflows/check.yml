@@ -1,0 +1,42 @@
+name: check
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  honesty:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: No dead commands or live capability claims
+        run: |
+          set -euo pipefail
+
+          test ! -e docker-compose.yml
+          test ! -e docker-compose.sim.yml
+          test ! -e ohho.repos
+          test -f LICENSE
+          test -f README.md
+
+          grep -q "Apache License" LICENSE
+          grep -q "Version 2.0, January 2004" LICENSE
+          grep -q "Copyright 2026 OhhO Robotics" LICENSE
+
+          grep -q "Concept — not started. The working robot is" README.md
+          grep -q "https://github.com/ohho-robotics/ohho-humanoid.git" README.md
+          grep -q "https://github.com/ohho-robotics/OmniBot" README.md
+          grep -q "Apache-2.0" README.md
+
+          if grep -Ei "whole-body|\\bWBC\\b|\\bZMP\\b|SmolVLA|Isaac|RL policies|OhhO Fleet|OhhO Connect|OhhO Mind|docker compose|docker-compose|vcs import|\\bMPC\\b|swarm" README.md; then
+            echo "README still contains a capability claim or a dead command"
+            exit 1
+          fi
+
+          git ls-remote --heads https://github.com/ohho-robotics/ohho-humanoid.git >/dev/null
+          git ls-remote --heads https://github.com/ohho-robotics/OmniBot.git >/dev/null
+          git clone --depth 1 https://github.com/ohho-robotics/ohho-humanoid.git /tmp/ohho-humanoid-clone
+          test -f /tmp/ohho-humanoid-clone/README.md
+
+          echo "check: ok"
